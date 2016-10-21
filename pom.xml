@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (C) 2015 Red Hat, Inc
+  Copyright (C) 2016 Red Hat, Inc
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -103,6 +103,7 @@
   <modules>
     <module>fabric8-profiles-core</module>
     <module>fabric8-profiles-maven-plugin</module>
+    <module>fabric8-profiles-tooling</module>
   </modules>
 
   <dependencyManagement>

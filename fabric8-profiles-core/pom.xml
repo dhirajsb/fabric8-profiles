@@ -53,6 +53,13 @@
       <artifactId>org.eclipse.jgit</artifactId>
     </dependency>
 
+    <!-- Spring for YAML properties files -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-beans</artifactId>
+      <version>4.2.5.RELEASE</version>
+    </dependency>
+
     <!-- logging -->
     <dependency>
       <groupId>org.slf4j</groupId>

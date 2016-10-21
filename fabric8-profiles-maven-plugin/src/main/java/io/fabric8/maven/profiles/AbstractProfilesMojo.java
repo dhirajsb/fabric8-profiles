@@ -25,9 +25,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.fabric8.profiles.ProfilesHelpers;
+import io.fabric8.profiles.config.ConfigHelper;
+import io.fabric8.profiles.config.ProfilesConfigDTO;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -41,8 +45,7 @@ import org.apache.maven.project.MavenProject;
  */
 public abstract class AbstractProfilesMojo extends AbstractMojo {
 
-    protected static final String FABRIC8_PROFILES_CFG = "fabric8-profiles.cfg";
-    protected static final String LAST_BUILD_COMMIT_ID_PROPERTY = "lastBuildCommitId";
+    protected static final String FABRIC8_PROFILES_YAML = "fabric8-profiles.yaml";
     protected final Log log = getLog();
 
     /**
@@ -64,11 +67,12 @@ public abstract class AbstractProfilesMojo extends AbstractMojo {
     protected File targetDirectory;
 
     /**
-     * Build properties, overrides fabric8-profies.cfg under {@literal sourceDirectory}.
+     * Build properties, overrides fabric8-profiles.yaml under {@literal sourceDirectory}.
      */
     @Parameter(readonly = false, required = false)
-    protected Properties profilesProperties;
+    protected Map<String, String> profilesProperties;
 
+    protected ObjectNode profilesConfig;
     protected Path configs;
     protected Path profiles;
     protected String lastCommitId;
@@ -91,20 +95,20 @@ public abstract class AbstractProfilesMojo extends AbstractMojo {
         // read generator properties
         final Path sourcePath = Paths.get(sourceDirectory.getAbsolutePath());
         try {
-            final Properties propertiesFile = ProfilesHelpers.readPropertiesFile(sourcePath.resolve(FABRIC8_PROFILES_CFG));
+            final JsonNode yamlFile = ProfilesHelpers.readYamlFile(sourcePath.resolve(FABRIC8_PROFILES_YAML));
             if (profilesProperties == null) {
-                profilesProperties = propertiesFile;
+                profilesConfig = (ObjectNode) yamlFile;
             } else {
-                final Properties userOverrides = profilesProperties;
-                profilesProperties = new Properties(propertiesFile);
-                profilesProperties.putAll(userOverrides);
+                profilesConfig = (ObjectNode) ProfilesHelpers.merge(yamlFile, ConfigHelper.toJson(profilesProperties));
             }
-        } catch (IOException e) {
-            throw new MojoExecutionException("Error reading " + FABRIC8_PROFILES_CFG + ": " + e.getMessage(), e);
-        }
 
-        // last build id
-        lastCommitId = profilesProperties.getProperty(LAST_BUILD_COMMIT_ID_PROPERTY);
+            // last build id
+            ProfilesConfigDTO profilesConfigDTO = ConfigHelper.toValue(profilesConfig, ProfilesConfigDTO.class);
+            lastCommitId = profilesConfigDTO.getLastBuildCommitId();
+
+        } catch (IOException e) {
+            throw new MojoExecutionException("Error reading " + FABRIC8_PROFILES_YAML + ": " + e.getMessage(), e);
+        }
 
         // repository paths
         final Path repository = Paths.get(sourceDirectory.getAbsolutePath());
@@ -113,8 +117,8 @@ public abstract class AbstractProfilesMojo extends AbstractMojo {
         if (!Files.isDirectory(configs)) {
             throw new MojoExecutionException("Missing container directory " + configs);
         }
-        profiles = repository.resolve("profiles");
-        if (!Files.isDirectory(profiles)) {
+        this.profiles = repository.resolve("profiles");
+        if (!Files.isDirectory(this.profiles)) {
             throw new MojoExecutionException("Missing profiles directory " + configs);
         }
     }
